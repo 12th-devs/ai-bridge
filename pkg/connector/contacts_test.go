@@ -19,6 +19,34 @@ import (
 	"github.com/beeper/ai-bridge/pkg/aiid"
 )
 
+func TestChatGPTDefaultModelCatalogFallback(t *testing.T) {
+	for _, unavailable := range []bool{false, true} {
+		client := &Client{Main: &Connector{}}
+		if unavailable {
+			client.Main.AppServiceToken = "test-token"
+			client.UserLogin = &bridgev2.UserLogin{UserLogin: &database.UserLogin{UserMXID: "@test:unsupported.invalid"}}
+		}
+		provider := aiid.ProviderConfig{ID: chatGPTProviderID, Provider: ai.ProviderOpenAI, API: ai.ApiOpenAICodexResponses, DefaultModel: "gpt-5-codex"}
+		got, err := client.providerWithCatalogModelsStrictWithRefresh(context.Background(), provider, true)
+		if err != nil || len(got.Models) != 1 || got.Models[0].ID != provider.DefaultModel {
+			t.Fatalf("unavailable=%v: unexpected fallback %#v, %v", unavailable, got.Models, err)
+		}
+		if len(provider.Models) != 0 {
+			t.Fatal("fallback mutated saved provider")
+		}
+		provider.Models = []ai.Model{{ID: "configured-model"}}
+		got, err = client.providerWithCatalogModelsStrictWithRefresh(context.Background(), provider, true)
+		if err != nil || len(got.Models) != 1 || got.Models[0].ID != "configured-model" {
+			t.Fatalf("configured models not preserved: %#v, %v", got.Models, err)
+		}
+		provider.ID = "other"
+		_, err = client.providerWithCatalogModelsStrictWithRefresh(context.Background(), provider, true)
+		if unavailable && err == nil {
+			t.Fatal("other providers must retain catalog errors")
+		}
+	}
+}
+
 func TestModelContactsExposeConfiguredModels(t *testing.T) {
 	provider := aiid.ProviderConfig{
 		ID:          "local",

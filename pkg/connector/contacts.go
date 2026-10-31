@@ -318,7 +318,7 @@ func (cl *Client) providerWithCatalogModelsStrict(ctx context.Context, provider 
 
 func (cl *Client) providerWithCatalogModelsStrictWithRefresh(ctx context.Context, provider aiid.ProviderConfig, refresh bool) (aiid.ProviderConfig, error) {
 	models, err := cl.cachedAIServicesCatalogModels(ctx, provider, refresh)
-	if err != nil {
+	if err != nil && provider.ID != chatGPTProviderID {
 		return provider, err
 	}
 	if len(models) > 0 {
@@ -328,6 +328,13 @@ func (cl *Client) providerWithCatalogModelsStrictWithRefresh(ctx context.Context
 			Str("provider_id", provider.ID).
 			Int("model_count", len(models)).
 			Msg("Loaded AI Services model catalog")
+	}
+	// ChatGPT OAuth can configure a default without registering any models.
+	// Keep that model usable when the catalog is empty or unavailable.
+	if provider.ID == chatGPTProviderID && len(provider.Models) == 0 && provider.DefaultModel != "" {
+		provider.Models = []ai.Model{
+			normalizeProviderModel(modelForProviderConfig(provider, provider.DefaultModel), provider),
+		}
 	}
 	return provider, nil
 }
