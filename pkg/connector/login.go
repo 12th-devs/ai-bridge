@@ -57,11 +57,17 @@ func (c *Connector) GetLoginFlows() []bridgev2.LoginFlow {
 		Name:        "ChatGPT",
 		Description: "Log in with ChatGPT using a browser device code",
 		ID:          loginFlowChatGPTDevice,
+	}, {
+		Name:        "OpenCode Go",
+		Description: "Connect OpenCode Go for coding-agent conversations",
+		ID:          openCodeGoID,
 	}}
 }
 
 func (c *Connector) CreateLogin(ctx context.Context, user *bridgev2.User, flowID string) (bridgev2.LoginProcess, error) {
 	switch flowID {
+	case openCodeGoID:
+		return &CustomProviderLogin{Main: c, User: user, config: providerLoginConfig{ProviderID: openCodeGoID, API: ai.ApiOpenAICompletions}}, nil
 	case loginFlowBeeper:
 		return &BeeperLogin{Main: c, User: user}, nil
 	case loginFlowOpenAIResponses:
@@ -149,6 +155,14 @@ func (l *CustomProviderLogin) SubmitUserInput(ctx context.Context, input map[str
 }
 
 func (l *CustomProviderLogin) providerConfigStep() *bridgev2.LoginStep {
+	if l.config.ProviderID == openCodeGoID {
+		return &bridgev2.LoginStep{Type: bridgev2.LoginStepTypeUserInput, StepID: loginStepProviderConfig,
+			Instructions: "Enter your OpenCode Go API key. Go is intended for coding-agent conversations.",
+			UserInputParams: &bridgev2.LoginUserInputParams{Fields: []bridgev2.LoginInputDataField{
+				{Type: bridgev2.LoginInputFieldTypeToken, ID: "api_key", Name: "OpenCode Go API key"},
+			}},
+		}
+	}
 	return &bridgev2.LoginStep{
 		Type:         bridgev2.LoginStepTypeUserInput,
 		StepID:       loginStepProviderConfig,
@@ -165,6 +179,10 @@ func (l *CustomProviderLogin) submitProviderConfig(ctx context.Context, input ma
 	providerID := strings.TrimSpace(input["provider_id"])
 	baseURL := normalizeResponsesBaseURL(strings.TrimSpace(input["base_url"]))
 	apiKey := strings.TrimSpace(input["api_key"])
+	if l.config.ProviderID == openCodeGoID {
+		providerID = openCodeGoID
+		baseURL = openCodeGoBaseURL
+	}
 	log := providerLoginLog(ctx, string(l.config.API), providerID)
 	log = providerLoginURLFields(log, baseURL)
 	ctx = log.WithContext(ctx)
@@ -298,6 +316,7 @@ func providerDisplayName(providerID string) string {
 		return "Provider"
 	}
 	known := map[string]string{
+		openCodeGoID:    "OpenCode Go",
 		"anthropic":     "Anthropic",
 		"google-vertex": "Google Vertex",
 		"openai":        "OpenAI",
@@ -335,6 +354,9 @@ func customProviderConfig(providerID string, displayName string, baseURL string,
 }
 
 func inferProviderRoute(providerID string, baseURL string) (ai.Provider, ai.Api) {
+	if providerID == openCodeGoID {
+		return ai.Provider(openCodeGoID), ai.ApiOpenAICompletions
+	}
 	providerID = strings.ToLower(providerID)
 	baseURL = strings.ToLower(baseURL)
 	if providerID == string(ai.ProviderOpenRouter) || strings.Contains(baseURL, "openrouter.ai") {

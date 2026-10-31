@@ -434,10 +434,15 @@ func (cl *Client) generateSessionTitle(ctx context.Context, portal *bridgev2.Por
 		titleLog.Debug().Err(err).Str("action", "session_title").Msg("Skipping session title generation")
 		return
 	}
+	sessionMetadata, err := agentSession.GetMetadata(ctx)
+	if err != nil {
+		return
+	}
 	title, err := sessiontitle.Generate(titleCtx, contextView.Messages, sessiontitle.Options{
-		Model:   titleModel,
-		APIKey:  auth.APIKey,
-		Headers: auth.Headers,
+		SessionID: sessionMetadata.ID,
+		Model:     titleModel,
+		APIKey:    auth.APIKey,
+		Headers:   auth.Headers,
 	})
 	if err != nil || title == "" {
 		if err != nil {

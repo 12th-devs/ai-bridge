@@ -55,6 +55,9 @@ func (c *Connector) providerConfigFromInput(ctx context.Context, userMXID id.Use
 	input.BaseURL = normalizeResponsesBaseURL(strings.TrimSpace(input.BaseURL))
 	input.APIKey = strings.TrimSpace(input.APIKey)
 	input.DefaultModel = strings.TrimSpace(input.DefaultModel)
+	if input.ID == openCodeGoID && input.BaseURL == "" {
+		input.BaseURL = openCodeGoBaseURL
+	}
 	if input.ID == "" {
 		return aiid.ProviderConfig{}, fmt.Errorf("provider id is required")
 	}
@@ -105,6 +108,9 @@ func (c *Connector) providerConfigFromInput(ctx context.Context, userMXID id.Use
 }
 
 func (c *Connector) aiServicesCatalogModelsForUserProvider(ctx context.Context, userMXID id.UserID, provider aiid.ProviderConfig) ([]ai.Model, error) {
+	if provider.Provider == ai.Provider(openCodeGoID) {
+		return openCodeGoModels(ctx, provider, openCodeGoModelsURL)
+	}
 	client := &Client{
 		Main: c,
 		UserLogin: &bridgev2.UserLogin{
@@ -116,6 +122,8 @@ func (c *Connector) aiServicesCatalogModelsForUserProvider(ctx context.Context, 
 
 func providerAPIAllowed(provider ai.Provider, api ai.Api) bool {
 	switch provider {
+	case ai.Provider(openCodeGoID):
+		return api == ai.ApiOpenAICompletions
 	case ai.ProviderOpenAI:
 		return api == ai.ApiOpenAIResponses || api == ai.ApiOpenAICompletions || api == ai.ApiOpenAICodexResponses
 	case ai.ProviderOpenRouter:

@@ -556,6 +556,13 @@ func buildOpenAIClientConfig(model ai.Model, llmContext ai.Context, options ai.S
 	for key, value := range options.Headers {
 		headers[key] = value
 	}
+	if model.Provider == ai.Provider("opencode-go") {
+		headers["User-Agent"] = "beeper-ai-bridge/1.0"
+		if options.SessionID == "" {
+			return openAIClientConfig{}, fmt.Errorf("OpenCode Go requires a conversation session ID")
+		}
+		headers["x-opencode-session"] = options.SessionID
+	}
 	if model.Provider == ai.ProviderCloudflareAIGateway {
 		if _, ok := headerValue(headers, nil, "authorization"); !ok {
 			headers["Authorization"] = ""

@@ -408,13 +408,22 @@ When context approaches the model's window, [`pkg/agent/autocompact`](pkg/agent/
 
 ## Login & provider configuration
 
-The bridge advertises five login flows (`pkg/connector/login.go`):
+The bridge advertises the following login flows (`pkg/connector/login.go`):
 
 | Flow | What it does |
 |------|--------------|
 | `beeper` | The default **Beeper AI** login. Loads its catalog and runtime proxy metadata from `ai-services.<domain>` derived from the user's homeserver; uses an appservice bearer token, no stored key. Read-only/managed. |
 | `openai-responses` / `openai-completions` / `openai-codex-responses` / `anthropic-messages` / `google-vertex` | **Custom provider**: enter base URL + API key, the bridge loads matching model metadata from ai-services, then you pick a default model. |
 | `chatgpt-device` | **ChatGPT** OAuth device-code flow (PKCE). Stores access + refresh tokens, auto-refreshes within 2 min of expiry. |
+| `opencode-go` | **OpenCode Go**: enter your Go API key, load models directly from OpenCode's public catalog, and choose a default. Uses the OpenAI-compatible Go endpoint, independently of Beeper's catalog. |
+
+OpenCode Go is intended for coding-agent conversations. The bridge identifies itself
+as `beeper-ai-bridge/1.0` and sends a stable `x-opencode-session` per conversation,
+including title generation. Connect through the **OpenCode Go** login flow; existing
+ChatGPT providers remain available. All Go text models use OpenCode's documented
+Chat Completions translation endpoint. Model availability and limits belong to your
+Go subscription, and a successful catalog fetch does not validate the API key.
+See https://opencode.ai/v2/docs/console/go/ for current service requirements.
 
 One Matrix user can hold multiple AI logins; there's a canonical "AI Chats" login per user. Provider configs (with secrets) live in `UserLoginMetadata.Providers`. API keys support `env:NAME` indirection. The `beeper` provider is special and **read-only** — it can't be added/updated/deleted.
 

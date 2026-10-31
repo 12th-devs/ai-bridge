@@ -26,6 +26,7 @@ Rules:
 const maxTitleChars = 48
 
 type Options struct {
+	SessionID  string
 	Model      ai.Model
 	APIKey     string
 	Headers    map[string]string
@@ -56,6 +57,7 @@ func Generate(ctx context.Context, messages []agent.AgentMessage, options Option
 		}},
 	}, ai.SimpleStreamOptions{StreamOptions: ai.StreamOptions{
 		APIKey:    options.APIKey,
+		SessionID: options.SessionID,
 		Headers:   options.Headers,
 		MaxTokens: &maxTokens,
 	}})

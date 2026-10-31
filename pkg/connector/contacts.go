@@ -436,6 +436,9 @@ func listedProviderModelContacts(ctx context.Context, br *bridgev2.Bridge, provi
 }
 
 func (cl *Client) aiServicesCatalogModels(ctx context.Context, provider aiid.ProviderConfig) ([]ai.Model, error) {
+	if provider.Provider == ai.Provider(openCodeGoID) {
+		return openCodeGoModels(ctx, provider, openCodeGoModelsURL)
+	}
 	if cl == nil || cl.Main == nil || cl.UserLogin == nil || cl.Main.AppServiceToken == "" {
 		return nil, nil
 	}
